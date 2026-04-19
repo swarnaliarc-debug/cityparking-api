@@ -1,7 +1,6 @@
 package edu.svu.cityparking_api;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 import lombok.Getter;
