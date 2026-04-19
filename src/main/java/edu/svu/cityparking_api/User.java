@@ -31,6 +31,17 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
+    private String name;
+
+    private String email;
+
+    private String phone;
+
+    private int age;
+
+    private char gender;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Vehicle> vehicles = new ArrayList<>();
