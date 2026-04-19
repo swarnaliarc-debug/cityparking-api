@@ -1,10 +1,8 @@
 package edu.svu.cityparking_api;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.repository.query.Param;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @Slf4j
 public class BasicOpsController {
-    
+
     @Autowired
     private VehicleRepository vehicleRepository;
 
@@ -49,6 +47,14 @@ public class BasicOpsController {
         return newUser;
 
     }
+    
+    @PostMapping("/login")
+    public User login(@RequestBody LoginForm loginForm){
+        User user = userRepository.findByUsernameAndPassword(loginForm.getUsername(), loginForm.getPassword()).get();
+        return user;
+    }
+
+
 
     @PostMapping("/vehicle")
     public Vehicle createVehicle(@RequestBody Vehicle vehicle, @RequestParam String userid){
