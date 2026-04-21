@@ -3,6 +3,7 @@ package edu.svu.cityparking_api;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,7 +59,7 @@ public class BasicOpsController {
 
     @PostMapping("/vehicle")
     public Vehicle createVehicle(@RequestBody Vehicle vehicle, @RequestParam String userid){
-
+        log.info(""+vehicle.getId());
         User vehicleOwner = userRepository.findById(Long.parseLong(userid)).get();
         vehicle.setUser(vehicleOwner);
         Vehicle newVehicle = vehicleRepository.save(vehicle);
@@ -66,5 +67,9 @@ public class BasicOpsController {
         
     }
  
+    @DeleteMapping("/vehicle/{id}")
+    public void deleteVehicle(@PathVariable String id){
+        vehicleRepository.deleteById(Long.parseLong(id));
+    }
 
 }
