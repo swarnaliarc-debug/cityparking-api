@@ -27,8 +27,9 @@ public class Vehicle {
     @Column(name = "color")
     private String color;
 
-    @Column(name = "plate_number")
+    @Column(name = "plate_number", unique = true, nullable = false)
     private String plateNumber;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id") 

@@ -10,11 +10,13 @@ public class ParkingRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // This creates the actual database link to the Vehicle table
     @ManyToOne
-    @JoinColumn(name = "vehicle_id") 
-    private Vehicle vehicle; 
-
+    @JoinColumn(name = "vehicle_id", nullable = true)
+    // This tells MySQL: "ON DELETE SET NULL"
+    @org.hibernate.annotations.OnDelete(
+        action = org.hibernate.annotations.OnDeleteAction.SET_NULL
+    )
+    private Vehicle vehicle;
     private String parkingId; 
     private LocalDateTime entryDateTime;
     private LocalDateTime exitDateTime;

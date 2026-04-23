@@ -2,6 +2,7 @@ package edu.svu.cityparking_api;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -56,14 +57,37 @@ public class BasicOpsController {
         return vehicleRepository.findByUserId(Long.parseLong(userid));
     }
 
+    @GetMapping("/vehicle/by-plate/{plateNumber}")
+    public Vehicle getVehicleByPlate(@PathVariable String plateNumber) {
+        log.info("AI Query for plate: " + plateNumber);
+        return vehicleRepository.findByPlateNumber(plateNumber).orElse(null);
+    }
+
     @PostMapping("/vehicle")
-    public Vehicle createVehicle(@RequestBody Vehicle vehicle, @RequestParam String userid){
-        log.info("Creating vehicle: " + vehicle.getPlateNumber());
-        User vehicleOwner = userRepository.findById(Long.parseLong(userid)).get();
+    public Vehicle createVehicle(@RequestBody Vehicle vehicle, @RequestParam String userid) {
+        log.info("Processing vehicle: " + vehicle.getPlateNumber());
+
+        Optional<Vehicle> existingVehicle = vehicleRepository.findByPlateNumber(vehicle.getPlateNumber());
+
+        if (existingVehicle.isPresent()) {
+            if (vehicle.getId() != null) {
+                if (!existingVehicle.get().getId().equals(vehicle.getId())) {
+                    log.error("Plate " + vehicle.getPlateNumber() + " is already taken by another vehicle!");
+                    return null;
+                }
+            } else {
+                log.error("Plate number already exists for a new registration!");
+                return null;
+            }
+        }
+
+        User vehicleOwner = userRepository.findById(Long.parseLong(userid))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         vehicle.setUser(vehicleOwner);
         return vehicleRepository.save(vehicle);
     }
- 
+
     @DeleteMapping("/vehicle/{id}")
     public void deleteVehicle(@PathVariable String id){
         vehicleRepository.deleteById(Long.parseLong(id));
@@ -76,55 +100,45 @@ public class BasicOpsController {
         return parkingRecordRepository.findAll();
     }
 
-    @PostMapping("/test-entry")
-    public String addTestEntry() {
-        // Find vehicle ID 5
-        Vehicle realVehicle = vehicleRepository.findById(5L).orElse(null);
+    /**
+     * DYNAMIC PARKING TOGGLE
+     * Replaces test-entry and test-exit. Works by Plate Number (Registration Number).
+     */
+    @PostMapping("/parking/toggle")
+    public String toggleParking(@RequestParam String plateNumber) {
+        log.info("Parking toggle requested for plate: " + plateNumber);
 
-        if (realVehicle == null) {
-            return "Error: Vehicle ID 5 not found in database!";
+        // 1. Find the vehicle by plate
+        Vehicle vehicle = vehicleRepository.findByPlateNumber(plateNumber).orElse(null);
+        if (vehicle == null) {
+            return "Error: Vehicle with plate [" + plateNumber + "] not found!";
         }
 
-        try {
-            // Check if already parked to prevent double entry
-            List<ParkingRecord> allRecords = parkingRecordRepository.findAll();
-            boolean isAlreadyParked = allRecords.stream()
-                .anyMatch(r -> r.getVehicle().getId().equals(5L) && r.getExitDateTime() == null);
-            
-            if (isAlreadyParked) {
-                return "Error: Vehicle is already parked (Status: IN). Use test-exit first.";
-            }
-
-            ParkingRecord test = new ParkingRecord();
-            test.setVehicle(realVehicle); 
-            test.setParkingId("SPOT-01");
-            test.setEntryDateTime(LocalDateTime.now());
-            
-            parkingRecordRepository.save(test);
-            return "Success! Entry recorded for plate: " + realVehicle.getPlateNumber(); 
-        } catch (Exception e) {
-            log.error("Save failed: " + e.getMessage());
-            return "Error saving record: " + e.getMessage();
-        }
-    }
-
-    @PostMapping("/test-exit")
-    public String addTestExit() {
-        Long targetVehicleId = 5L; 
-        
+        // 2. Check if currently parked (active record has no exit time)
         List<ParkingRecord> allRecords = parkingRecordRepository.findAll();
         ParkingRecord activeRecord = allRecords.stream()
-            .filter(r -> r.getVehicle().getId().equals(targetVehicleId) && r.getExitDateTime() == null)
+            .filter(r -> r.getVehicle().getPlateNumber().equals(plateNumber) && r.getExitDateTime() == null)
             .findFirst()
             .orElse(null);
 
-        if (activeRecord == null) {
-            return "Error: This vehicle is not currently parked (Status: OUT). Use test-entry first!";
+        try {
+            if (activeRecord != null) {
+                // EXIT
+                activeRecord.setExitDateTime(LocalDateTime.now());
+                parkingRecordRepository.save(activeRecord);
+                return "SUCCESS: Exit recorded for " + plateNumber + ". Status: OUT";
+            } else {
+                // ENTRY
+                ParkingRecord newEntry = new ParkingRecord();
+                newEntry.setVehicle(vehicle);
+                newEntry.setParkingId("SPOT-01");
+                newEntry.setEntryDateTime(LocalDateTime.now());
+                parkingRecordRepository.save(newEntry);
+                return "SUCCESS: Entry recorded for " + plateNumber + ". Status: IN";
+            }
+        } catch (Exception e) {
+            log.error("Parking toggle failed: " + e.getMessage());
+            return "Error: " + e.getMessage();
         }
-
-        activeRecord.setExitDateTime(LocalDateTime.now());
-        parkingRecordRepository.save(activeRecord);
-
-        return "Success! Exit recorded. Vehicle status updated to OUT.";
     }
 }
