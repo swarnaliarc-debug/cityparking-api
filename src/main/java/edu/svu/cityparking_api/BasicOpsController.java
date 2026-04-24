@@ -95,16 +95,14 @@ public class BasicOpsController {
 
     // --- Parking Records Endpoints ---
 
-    @GetMapping("/parking-history")
-    public List<ParkingRecord> getParkingHistory() {
-        return parkingRecordRepository.findAll();
+    @GetMapping("/parking-history/{userid}")
+    public List<ParkingRecord> getParkingHistory(@PathVariable String userid) {
+        log.info("Fetching history for user: " + userid);
+        return parkingRecordRepository.findByVehicleUserId(Long.parseLong(userid));
     }
 
-    /**
-     * DYNAMIC PARKING TOGGLE
-     * Replaces test-entry and test-exit. Works by Plate Number (Registration Number).
-     */
-    @PostMapping("/parking/toggle")
+
+       @PostMapping("/parking/toggle")
     public String toggleParking(@RequestParam String plateNumber) {
         log.info("Parking toggle requested for plate: " + plateNumber);
 
@@ -117,7 +115,9 @@ public class BasicOpsController {
         // 2. Check if currently parked (active record has no exit time)
         List<ParkingRecord> allRecords = parkingRecordRepository.findAll();
         ParkingRecord activeRecord = allRecords.stream()
-            .filter(r -> r.getVehicle().getPlateNumber().equals(plateNumber) && r.getExitDateTime() == null)
+            .filter(r -> r.getVehicle() != null && // <--- ADD THIS LINE TO PREVENT 500 ERROR
+                         r.getVehicle().getPlateNumber().equals(plateNumber) && 
+                         r.getExitDateTime() == null)
             .findFirst()
             .orElse(null);
 
@@ -141,4 +141,5 @@ public class BasicOpsController {
             return "Error: " + e.getMessage();
         }
     }
+
 }
