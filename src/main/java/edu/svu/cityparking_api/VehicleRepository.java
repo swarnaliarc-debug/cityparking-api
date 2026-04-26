@@ -15,4 +15,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
     // 2. Method for finding a specific vehicle by Plate Number
     Optional<Vehicle> findByPlateNumber(String plateNumber);
+
+    @Query("SELECT v FROM Vehicle v " +
+       "WHERE LOWER(REPLACE(v.plateNumber, ' ', '')) = LOWER(REPLACE(:plateNumber, ' ', ''))")
+    Optional<Vehicle> findByPlateNumberIgnoringSpacesAndCase(String plateNumber);
 }

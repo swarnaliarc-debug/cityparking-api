@@ -107,7 +107,7 @@ public class BasicOpsController {
         log.info("Parking toggle requested for plate: " + plateNumber);
 
         // 1. Find the vehicle by plate
-        Vehicle vehicle = vehicleRepository.findByPlateNumber(plateNumber).orElse(null);
+        Vehicle vehicle = vehicleRepository.findByPlateNumberIgnoringSpacesAndCase(plateNumber).orElse(null);
         if (vehicle == null) {
             return "Error: Vehicle with plate [" + plateNumber + "] not found!";
         }
@@ -115,10 +115,12 @@ public class BasicOpsController {
         // 2. Check if currently parked (active record has no exit time)
         List<ParkingRecord> allRecords = parkingRecordRepository.findAll();
         ParkingRecord activeRecord = allRecords.stream()
-            .filter(r -> r.getVehicle() != null && // <--- ADD THIS LINE TO PREVENT 500 ERROR
-                         r.getVehicle().getPlateNumber().equals(plateNumber) && 
-                         r.getExitDateTime() == null)
-            .findFirst()
+            .filter(r -> r.getVehicle() != null && 
+                        r.getVehicle().getPlateNumber() != null && // Added null check for safety
+                        r.getVehicle().getPlateNumber().replaceAll("\\s+", "")
+                        .equalsIgnoreCase(plateNumber.replaceAll("\\s+", "")) && 
+                        r.getExitDateTime() == null)
+            .findFirst()      // Streams usually require a terminal operation
             .orElse(null);
 
         try {
